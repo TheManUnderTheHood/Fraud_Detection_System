@@ -39,7 +39,7 @@ import java.time.LocalDateTime;
         private LocalDateTime timestamp;
 
         @Enumerated(EnumType.STRING)
-        @Column(nullable = false)
+        @Column(nullable = false, columnDefinition = "varchar(20)")
         private TransactionStatus status;
 
         @Column(nullable = false)

@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.ObjectProvider;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
@@ -21,14 +22,14 @@ import java.util.stream.Collectors;
 @Slf4j // Allows us to print logs to the console
 public class AiAgentService {
 
-    private final ChatClient.Builder chatClientBuilder;
+    private final ObjectProvider<ChatClient.Builder> chatClientBuilder;
     private final TransactionRepository transactionRepository;
     private final FraudDetectionService fraudDetectionService;
 
     @Value("${app.ai.enabled:false}")
     private boolean enabled;
 
-    @Value("${spring.ai.openai.api-key:}")
+    @Value("${OPENROUTER_API_KEY:}")
     private String apiKey;
 
     // @Async tells Spring: "Run this in a separate background thread immediately! Do not make the user wait."
@@ -98,7 +99,12 @@ public class AiAgentService {
 
         // 3. Call OpenRouter (OpenAI-compatible) using Spring AI ChatClient
         try {
-            ChatClient chatClient = chatClientBuilder.build();
+            ChatClient.Builder builder = chatClientBuilder.getIfAvailable();
+            if (builder == null) {
+                log.info("AI client is unavailable for TX-{}; deterministic rules remain authoritative.", currentTx.getId());
+                return;
+            }
+            ChatClient chatClient = builder.build();
             String aiRaw = chatClient.prompt(prompt).call().content();
             String aiResponse = aiRaw == null ? "" : aiRaw.trim();
 
