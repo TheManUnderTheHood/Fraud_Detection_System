@@ -47,7 +47,7 @@ Transactions are intercepted and evaluated against historical data before execut
 * MySQL (Hosted on Aiven Cloud)
 
 **Frontend (SPA):**
-* React 18 (Vite)
+* React 19 (Vite)
 * Tailwind CSS v4
 * Lucide React (Icons)
 * Recharts (Data Visualization)
@@ -72,6 +72,16 @@ export DB_PASSWORD=your_password
 export JWT_SECRET="$(openssl rand -base64 32)"
 export CORS_ALLOWED_ORIGIN=http://localhost:5173
 ```
+For Aiven MySQL, use the JDBC form of the connection URL and enable SSL:
+```bash
+export DB_URL='jdbc:mysql://<aiven-host>:<aiven-port>/defaultdb?sslMode=REQUIRED'
+export DB_USERNAME=avnadmin
+read -rsp 'Database password: ' DB_PASSWORD
+echo
+export DB_PASSWORD
+```
+Do not place database passwords, JWT secrets, or API keys in this repository.
+
 3. Start the backend. Flyway applies the schema and indexes; set `FLYWAY_ENABLED=false` only when migrations are managed externally:
 ```bash
 cd Backend
@@ -88,3 +98,38 @@ npm run dev
 AI review is enabled by default when `OPENROUTER_API_KEY` is available. If no LLM key is detected, the system automatically uses only the deterministic fraud rules. To explicitly disable AI, export `AI_ENABLED=false`; optionally set `OPENROUTER_MODEL` to choose a model.
 
 For an existing database created before Flyway was introduced, review the baseline and `V2__add_fraud_indexes.sql` migration against the deployed schema before enabling migrations. The legacy account table name is `acounts` and is retained for compatibility.
+
+## 🗃️ Database Migrations
+
+Flyway manages database changes from versioned SQL files in `Backend/src/main/resources/db/migration`:
+
+* `V1__baseline_schema.sql` creates the application tables and constraints.
+* `V2__add_fraud_indexes.sql` adds indexes used by account, transaction, and alert queries.
+
+When the backend starts, Flyway validates previously applied migrations, runs pending migrations in version order, and records them in `flyway_schema_history`. Never edit a migration that has already succeeded; add a new version such as `V3__add_review_notes.sql` instead.
+
+For an empty database, the normal startup command is sufficient. For an existing database, take a backup first and inspect the current schema before using `baseline-on-migrate`. If a migration fails after making database changes, repair the Flyway history only after confirming the schema state:
+
+```bash
+cd Backend
+bash mvnw org.flywaydb:flyway-maven-plugin:9.22.3:repair \
+	-Dflyway.url="$DB_URL" \
+	-Dflyway.user="$DB_USERNAME" \
+	-Dflyway.password="$DB_PASSWORD"
+```
+
+## ✅ Validation
+
+Run these checks before deployment:
+
+```bash
+cd Backend
+bash mvnw -DskipTests compile
+
+cd ../Frontend
+npm ci
+npm run lint
+npm run build
+```
+
+The backend requires a reachable MySQL database at startup because Hibernate uses `ddl-auto=validate` and Flyway performs schema validation/migration.
