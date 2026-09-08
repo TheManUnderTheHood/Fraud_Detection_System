@@ -29,22 +29,38 @@ public class AdminService {
                         .reason(alert.getReason())
                         .reviewed(alert.isReviewed())
                         .createdAt(alert.getCreatedAt())
+                        .severity(alert.getSeverity())
+                        .source(alert.getSource())
+                        .reviewedBy(alert.getReviewedBy())
+                        .reviewedAt(alert.getReviewedAt())
                         .build())
                 .toList();
     }
 
-    public FraudAlert markAlertAsReviewed(Long alertId, String adminEmail) {
+    public AdminAlertDto markAlertAsReviewed(Long alertId, String adminEmail) {
         FraudAlert alert = fraudAlertRepository.findById(alertId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fraud alert not found"));
         alert.setReviewed(true);
+        alert.setReviewedBy(adminEmail);
+        alert.setReviewedAt(java.time.LocalDateTime.now());
         FraudAlert savedAlert = fraudAlertRepository.save(alert);
         auditService.logAction("FRAUD_REVIEWED_ID_" + alert.getId(), adminEmail);
 
-        return savedAlert;
+        return AdminAlertDto.builder()
+            .id(savedAlert.getId())
+            .transactionId(savedAlert.getTransaction().getId())
+            .reason(savedAlert.getReason())
+            .reviewed(savedAlert.isReviewed())
+            .createdAt(savedAlert.getCreatedAt())
+            .severity(savedAlert.getSeverity())
+            .source(savedAlert.getSource())
+            .reviewedBy(savedAlert.getReviewedBy())
+            .reviewedAt(savedAlert.getReviewedAt())
+            .build();
     }
     public AdminStatsDto getSystemStatistics(long totalTransactions) {
         long totalAlerts = fraudAlertRepository.count();
-        long pending = fraudAlertRepository.findByReviewedFalse().size();
+        long pending = fraudAlertRepository.countByReviewedFalse();
 
         return AdminStatsDto.builder()
                 .totalTransactions(totalTransactions)

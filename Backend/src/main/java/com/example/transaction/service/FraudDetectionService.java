@@ -37,10 +37,19 @@ public class FraudDetectionService {
         return null;
     }
     public void createFraudAlert(Transaction savedTransaction, String reason) {
+        createFraudAlert(savedTransaction, reason, "RULE");
+    }
+
+    public void createFraudAlert(Transaction savedTransaction, String reason, String source) {
+        if (fraudAlertRepository.existsByTransactionIdAndSource(savedTransaction.getId(), source)) {
+            return;
+        }
         FraudAlert alert = FraudAlert.builder()
                 .transaction(savedTransaction)
                 .reason(reason)
                 .reviewed(false)
+                .severity(source.equals("AI") ? "MEDIUM" : "HIGH")
+                .source(source)
                 .build();
         fraudAlertRepository.save(alert);
     }

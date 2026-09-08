@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, LogOut, CheckCircle, RefreshCw, Activity, AlertOctagon, CheckSquare } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -9,11 +9,7 @@ export default function Admin() {
     const [stats, setStats] = useState(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchAlertsAndStats();
-    }, []);
-
-    const fetchAlertsAndStats = async () => {
+    const fetchAlertsAndStats = useCallback(async () => {
         try {
             const alertRes = await api.get('/admin/alerts');
             setAlerts(alertRes.data);
@@ -28,7 +24,12 @@ export default function Admin() {
             }
             navigate('/dashboard');
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => fetchAlertsAndStats(), 0);
+        return () => window.clearTimeout(timer);
+    }, [fetchAlertsAndStats]);
 
     const reviewAlert = async (alertId) => {
         try {
@@ -119,9 +120,16 @@ export default function Admin() {
                                         <td className="p-4 text-sm text-slate-500">{new Date(alert.createdAt).toLocaleString()}</td>
                                         <td className="p-4 font-mono text-sm text-slate-600">TX-{alert.transactionId ?? alert.transaction?.id}</td>
                                         <td className="p-4">
-                                            <span className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-red-200">
-                                                {alert.reason}
-                                            </span>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-red-200">
+                                                    {alert.reason}
+                                                </span>
+                                                {alert.source === 'AI' && (
+                                                    <span className="bg-indigo-100 text-indigo-700 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-indigo-200">
+                                                        AI Review
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="p-4 text-right">
                                             <button onClick={() => reviewAlert(alert.id)} className="bg-white border border-emerald-500 text-emerald-600 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-semibold transition shadow-sm">

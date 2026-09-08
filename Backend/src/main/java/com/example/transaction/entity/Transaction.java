@@ -2,8 +2,8 @@ package com.example.transaction.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.example.transaction.enums.TransactionStatus;
-import jakarta.persistence .*;
-import lombok .*;
+import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
     @AllArgsConstructor
     @Builder
     @Entity
-    @Table(name = "transactions")
+    @Table(name = "transactions", uniqueConstraints = @UniqueConstraint(name = "uk_transaction_request", columnNames = {"initiated_by", "idempotency_key"}))
 
     public class Transaction {
         @Id
@@ -44,4 +44,10 @@ import java.time.LocalDateTime;
 
         @Column(nullable = false)
         private boolean flagged;
+
+        @Column(length = 100)
+        private String idempotencyKey;
+
+        @Column(nullable = false, length = 320)
+        private String initiatedBy;
     }

@@ -6,4 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 public interface FraudAlertRepository extends JpaRepository<FraudAlert, Long> {
     List<FraudAlert> findByReviewedFalse();
+
+    long countByReviewedFalse();
+
+    boolean existsByTransactionIdAndSource(Long transactionId, String source);
 }

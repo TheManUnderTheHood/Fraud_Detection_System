@@ -15,5 +15,9 @@ public class AdminAlertDto {
     private String reason;
     private boolean reviewed;
     private LocalDateTime createdAt;
+    private String severity;
+    private String source;
+    private String reviewedBy;
+    private LocalDateTime reviewedAt;
 }
 

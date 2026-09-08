@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, Send, History, AlertTriangle, LogOut, CheckCircle, Loader2, BarChart3 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -12,11 +12,17 @@ export default function Dashboard() {
     const [isTransferring, setIsTransferring] = useState(false);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchAccountData();
+    const fetchHistory = useCallback(async (accountId) => {
+        try {
+            const res = await api.get(`/transaction/history/${accountId}`);
+            setHistory(res.data.sort((a, b) => b.id - a.id));
+        } catch (err) {
+            toast.error(err.response?.data?.error || "Failed to load transaction history.");
+            setHistory([]);
+        }
     }, []);
 
-    const fetchAccountData = async () => {
+    const fetchAccountData = useCallback(async () => {
         try {
             const res = await api.get('/account/my-accounts');
             if (res.data.length > 0) {
@@ -26,17 +32,12 @@ export default function Dashboard() {
         } catch {
             navigate('/');
         }
-    };
+    }, [fetchHistory, navigate]);
 
-    const fetchHistory = async (accountId) => {
-        try {
-            const res = await api.get(`/transaction/history/${accountId}`);
-            setHistory(res.data.sort((a, b) => b.id - a.id));
-        } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to load transaction history.");
-            setHistory([]);
-        }
-    };
+    useEffect(() => {
+        const timer = window.setTimeout(() => fetchAccountData(), 0);
+        return () => window.clearTimeout(timer);
+    }, [fetchAccountData]);
 
     const handleTransfer = async (e) => {
         e.preventDefault();
@@ -45,7 +46,8 @@ export default function Dashboard() {
             const res = await api.post('/transaction/transfer', {
                 senderAccountId: account.id,
                 receiverAccountId: parseInt(transferData.receiverAccountId),
-                amount: parseFloat(transferData.amount)
+                amount: transferData.amount,
+                idempotencyKey: crypto.randomUUID(),
             });
 
             if (res.data.flagged) {
@@ -70,8 +72,8 @@ export default function Dashboard() {
     // Prepare data for the chart (Last 7 transactions)
     const chartData = history.slice(0, 7).reverse().map(tx => ({
         name: `TX-${tx.id}`,
-        Sent: tx.senderAccount.id === account?.id ? tx.amount : 0,
-        Received: tx.receiverAccount.id === account?.id ? tx.amount : 0,
+        Sent: tx.senderAccountId === account?.id ? Number(tx.amount) : 0,
+        Received: tx.receiverAccountId === account?.id ? Number(tx.amount) : 0,
     }));
 
     return (
@@ -167,15 +169,15 @@ export default function Dashboard() {
                                         {history.length === 0 ? (
                                             <tr><td colSpan="4" className="p-8 text-center text-slate-500">No transactions found.</td></tr>
                                         ) : history.slice(0, 10).map((tx) => {
-                                            const isSender = account && tx.senderAccount.id === account.id;
+                                            const isSender = account && tx.senderAccountId === account.id;
                                             return (
                                                 <tr key={tx.id} className="border-b border-slate-50 hover:bg-slate-50 transition">
                                                     <td className="p-4 text-slate-600 text-sm">#{tx.id}</td>
                                                     <td className="p-4 text-sm">
-                                                        {isSender ? <span className="text-slate-600">Sent to #{tx.receiverAccount.id}</span> : <span className="text-slate-600">Received from #{tx.senderAccount.id}</span>}
+                                                        {isSender ? <span className="text-slate-600">Sent to #{tx.receiverAccountId}</span> : <span className="text-slate-600">Received from #{tx.senderAccountId}</span>}
                                                     </td>
                                                     <td className={`p-4 font-bold ${isSender ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                        {isSender ? '-' : '+'}${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                                        {isSender ? '-' : '+'}${Number(tx.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                                     </td>
                                                     <td className="p-4">
                                                         {tx.flagged ? (

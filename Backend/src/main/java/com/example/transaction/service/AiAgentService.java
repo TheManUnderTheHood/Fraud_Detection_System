@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
@@ -23,9 +25,20 @@ public class AiAgentService {
     private final TransactionRepository transactionRepository;
     private final FraudDetectionService fraudDetectionService;
 
+    @Value("${app.ai.enabled:false}")
+    private boolean enabled;
+
+    @Value("${spring.ai.openai.api-key:}")
+    private String apiKey;
+
     // @Async tells Spring: "Run this in a separate background thread immediately! Do not make the user wait."
     @Async
+    @Transactional
     public void analyzeTransactionContext(Transaction currentTx, Account sender) {
+        if (!enabled || apiKey == null || apiKey.isBlank()) {
+            log.info("AI review unavailable for TX-{}; deterministic rules remain authoritative.", currentTx.getId());
+            return;
+        }
         log.info("🤖 AI Agent waking up to analyze transaction TX-{}...", currentTx.getId());
 
         // 1. Gather Context (the user's past outgoing behavior)
@@ -96,7 +109,7 @@ public class AiAgentService {
             // 4. Take Action based on AI Decision (Bulletproofed)
             if (aiResponse.toUpperCase().contains("FLAGGED")) {
                 // The AI caught something! Create a Fraud Alert asynchronously.
-                fraudDetectionService.createFraudAlert(currentTx, "[AI AGENT] " + aiResponse);
+                fraudDetectionService.createFraudAlert(currentTx, "[AI AGENT] " + aiResponse, "AI");
                 log.warn("🚨 AI Agent generated a new Fraud Alert for TX-{}", currentTx.getId());
             }
 

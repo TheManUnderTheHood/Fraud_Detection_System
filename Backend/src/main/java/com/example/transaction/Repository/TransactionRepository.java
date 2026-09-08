@@ -12,6 +12,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findBySenderAccountIdOrReceiverAccountId(Long senderId, Long receiverId);
 
+    java.util.Optional<Transaction> findByInitiatedByAndIdempotencyKey(String initiatedBy, String idempotencyKey);
+
     // JPQL queries the Java Objects, not the database tables.
 
     // 1. For "Rapid Transactions" Fraud Rule: Count how many transactions an account made since a specific time.

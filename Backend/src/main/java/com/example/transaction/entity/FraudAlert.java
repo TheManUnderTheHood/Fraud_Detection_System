@@ -28,6 +28,17 @@ public class FraudAlert {
     @Column(nullable = false)
     private boolean reviewed;
 
+    @Column(length = 20)
+    private String severity;
+
+    @Column(length = 320)
+    private String reviewedBy;
+
+    private LocalDateTime reviewedAt;
+
+    @Column(length = 20, nullable = false)
+    private String source;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

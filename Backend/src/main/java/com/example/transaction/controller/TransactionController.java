@@ -1,6 +1,7 @@
 package com.example.transaction.controller;
 
 import com.example.transaction.dto.TransactionRequest;
+import com.example.transaction.dto.TransactionDto;
 import com.example.transaction.entity.Transaction;
 import com.example.transaction.service.TransactionService;
 import jakarta.validation.Valid;
@@ -18,17 +19,17 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping("/transfer")
-    public ResponseEntity<Transaction> transferMoney(
+    public ResponseEntity<TransactionDto> transferMoney(
             @Valid @RequestBody TransactionRequest request,
             Authentication authentication
     ) {
         String userEmail = authentication.getName();
         Transaction processedTransaction = transactionService.processTransfer(request, userEmail);
-        return ResponseEntity.ok(processedTransaction);
+        return ResponseEntity.ok(transactionService.toDto(processedTransaction));
     }
 
     @GetMapping("/history/{accountId}")
-    public ResponseEntity<List<Transaction>> getTransactionHistory(
+    public ResponseEntity<List<TransactionDto>> getTransactionHistory(
             @PathVariable Long accountId,
             Authentication authentication
     ) {

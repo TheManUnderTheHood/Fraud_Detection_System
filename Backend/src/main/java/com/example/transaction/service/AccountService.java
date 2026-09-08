@@ -4,6 +4,7 @@ import com.example.transaction.Repository.AccountRepository;
 import com.example.transaction.Repository.UserRepository;
 import com.example.transaction.entity.Account;
 import com.example.transaction.entity.User;
+import com.example.transaction.dto.AccountDto;
 import com.example.transaction.exception.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +39,16 @@ public class AccountService {
 
         return accountRepository.findByUserId(user.getId());
     }
-    public Account getAccountById(Long accountId) {
-        return accountRepository.findById(accountId)
+    public Account getAccountById(Long accountId, String userEmail) {
+        Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+        if (!account.getUser().getEmail().equals(userEmail)) {
+            throw new org.springframework.security.access.AccessDeniedException("Unauthorized access to account");
+        }
+        return account;
+    }
+
+    public AccountDto toDto(Account account) {
+        return AccountDto.builder().id(account.getId()).balance(account.getBalance()).build();
     }
 }
