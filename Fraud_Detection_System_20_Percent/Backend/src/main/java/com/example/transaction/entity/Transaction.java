@@ -1,0 +1,53 @@
+package com.example.transaction.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.example.transaction.enums.TransactionStatus;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Entity
+    @Table(name = "transactions", uniqueConstraints = @UniqueConstraint(name = "uk_transaction_request", columnNames = {"initiated_by", "idempotency_key"}))
+
+    public class Transaction {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "sender_account_id", nullable = false)
+        @JsonIgnoreProperties({"user", "hibernateLazyInitializer", "handler"})
+        private Account senderAccount;
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "receiver_account_id", nullable = false)
+        @JsonIgnoreProperties({"user", "hibernateLazyInitializer", "handler"})
+        private Account receiverAccount;
+
+        @Column(nullable = false, precision = 15, scale = 2)
+        private BigDecimal amount;
+
+        @CreationTimestamp
+        @Column(updatable = false)
+        private LocalDateTime timestamp;
+
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false, columnDefinition = "varchar(20)")
+        private TransactionStatus status;
+
+        @Column(nullable = false)
+        private boolean flagged;
+
+        @Column(length = 100)
+        private String idempotencyKey;
+
+        @Column(nullable = false, length = 320)
+        private String initiatedBy;
+    }
